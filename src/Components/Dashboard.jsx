@@ -77,7 +77,6 @@ const Dashboard = () => {
         <h2 className="text-3xl font-bold text-gray-800">Dashboard</h2>
       </div>
 
-      {/* Add New Company */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
         <h3 className="text-2xl font-semibold text-gray-800 mb-4">Add New Company</h3>
         <input
@@ -95,7 +94,7 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* Log New Communication */}
+    
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
         <h3 className="text-2xl font-semibold text-gray-800 mb-4">Log New Communication</h3>
         <form>

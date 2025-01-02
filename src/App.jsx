@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { initializeApp } from "firebase/app";
 import {
@@ -13,6 +13,7 @@ import Dashboard from "./Components/Dashboard.jsx";
 import AnalyticsDashboard from "./Components/AnalyticsDashboard.jsx";
 import CalendarSection from "./Components/Calender.jsx";
 import Dashboard1 from "./Components/guest.jsx";
+import NotificationBell from "./Components/NotificationBell.jsx"; // Import NotificationBell
 import "./index.css";
 import image from "./assets/download.jpg";
 
@@ -30,20 +31,21 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-const ProtectedRoute = ({ user, children }) => {
-  if (!user) {
-    return <Navigate to="/" />;
-  }
-  return children;
-};
-
 const App = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [darkMode, setDarkMode] = useState(
+    localStorage.getItem("darkMode") === "true"
+  );
+  const [notifications] = useState([
+    "Welcome to ConvoTrack!",
+    "Your analytics are ready!",
+    "New feature: Dark Mode is live!",
+  ]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser || null);
+      setUser(currentUser ? { ...currentUser, isGuest: false } : null);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -51,29 +53,38 @@ const App = () => {
 
   const handleGoogleSignIn = async () => {
     try {
-      const result = await signInWithPopup(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Error signing in with Google:", error.message);
     }
   };
 
   const handleGuestLogin = () => {
-    setUser({ isGuest: true });
+    setUser({ isGuest: true, displayName: "Guest User", photoURL: null });
   };
 
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
-      setUser(null);
+      if (user?.isGuest) {
+        setUser(null);
+      } else {
+        await signOut(auth);
+        setUser(null);
+      }
       window.location.href = "/";
     } catch (error) {
       console.error("Error signing out:", error.message);
     }
   };
 
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    localStorage.setItem("darkMode", !darkMode);
+  };
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen text-lg animate-pulse">
+      <div className="flex justify-center items-center h-screen text-lg animate-spin text-gray-700">
         Loading...
       </div>
     );
@@ -82,20 +93,23 @@ const App = () => {
   if (!user) {
     return (
       <div className="flex justify-center items-center h-screen bg-gradient-to-r from-blue-500">
-        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-          <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
-            Welcome to ConvoTrack!
+        <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md transition-transform hover:scale-105">
+          <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">
+            Welcome to ConvoTrack!!
           </h2>
+          <p className="text-center text-gray-500 mb-6">
+            Track and manage conversations with ease!
+          </p>
           <button
             onClick={handleGoogleSignIn}
-            className="btn btn-primary flex items-center justify-center w-full mb-4 bg-red-500"
+            className="btn flex items-center justify-center w-full mb-4 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded transition-transform hover:scale-105"
           >
             <img className="h-6 w-6 mr-2" src={image} alt="Google Logo" />
             Sign in with Google
           </button>
           <button
             onClick={handleGuestLogin}
-            className="btn btn-secondary w-full"
+            className="btn w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded transition-transform hover:scale-105"
           >
             Continue as Guest
           </button>
@@ -106,74 +120,62 @@ const App = () => {
 
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-red-500 text-white p-6 shadow-md flex justify-between items-center">
+      <div
+        className={`min-h-screen ${
+          darkMode ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-900"
+        }`}
+      >
+        <header className="bg-gradient-to-r from-red-500 to-orange-500 text-white p-6 shadow-md flex justify-between items-center">
           <h1 className="text-3xl font-bold">ConvoTrack</h1>
           <nav>
-            <ul className="flex space-x-6">
+            <ul className="flex space-x-4 pr-10">
               <li>
-                <Link
-                  to="/admin"
-                  className="text-white hover:text-yellow-300 px-4 py-2 rounded-lg hover:bg-red-700"
-                >
-                  Admin Dashboard
+                <Link to="/admin" className="hover:underline">
+                  Admin
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/user"
-                  className="text-white hover:text-yellow-300 px-4 py-2 rounded-lg hover:bg-red-700"
-                >
-                  User Dashboard
+                <Link to="/user" className="hover:underline">
+                  User
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/analytics"
-                  className="text-white hover:text-yellow-300 px-4 py-2 rounded-lg hover:bg-red-700"
-                >
-                  Analytics Dashboard
+                <Link to="/analytics" className="hover:underline">
+                  Analytics
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/calender"
-                  className="text-white hover:text-yellow-300 px-4 py-2 rounded-lg hover:bg-red-700"
-                >
+                <Link to="/calender" className="hover:underline">
                   Calendar
                 </Link>
               </li>
             </ul>
           </nav>
-          <button
-            onClick={handleSignOut}
-            className="btn btn-danger px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700"
-          >
-            Sign Out
-          </button>
+          <div className="flex items-center space-x-4">
+            <button onClick={toggleDarkMode} className="hover:underline">
+              {darkMode ? "☀️ Light Mode" : "🌙 Dark Mode"}
+            </button>
+            <NotificationBell notifications={notifications} />
+            <div className="relative group">
+              <button className="flex items-center space-x-2 hover:underline focus:outline-none">
+                <span className="h-8 w-8 flex items-center justify-center rounded-full bg-gray-200 text-gray-800">
+                  {user.displayName[0]}
+                </span>
+                <span>{user.displayName}</span>
+              </button>
+            </div>
+            <button onClick={handleSignOut} className="hover:underline">
+              Sign Out
+            </button>
+          </div>
         </header>
         <main className="p-6">
           <Routes>
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute user={user && !user.isGuest}>
-                  <AdminModule />
-                </ProtectedRoute>
-              }
-            />
-            {/* <Route
-              path="/analytics"
-              element={
-                <ProtectedRoute user={user && !user.isGuest}>
-                  <AnalyticsDashboard />
-                </ProtectedRoute>
-              }
-            /> */}
             <Route path="/user" element={<Dashboard isGuest={!!user?.isGuest} />} />
             <Route path="/" element={<Dashboard1 isGuest={!!user?.isGuest} />} />
             <Route path="/calender" element={<CalendarSection isGuest={!!user?.isGuest} />} />
             <Route path="/analytics" element={<AnalyticsDashboard isGuest={!!user?.isGuest} />} />
+            <Route path="/admin" element={<AdminModule isGuest={!!user?.isGuest} />} />
           </Routes>
         </main>
       </div>

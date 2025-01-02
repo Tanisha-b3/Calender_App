@@ -1,8 +1,6 @@
-import React, { useState } from 'react'; 
-import '../index.css';
+import React, { useState, useEffect } from 'react';
 
-const AdminModule = () => {
-  const [role, setRole] = useState('');
+const AdminModule = ({ isGuest }) => {
   const [companies, setCompanies] = useState([]);
   const [methods, setMethods] = useState([
     { name: 'LinkedIn Post', description: 'Post on LinkedIn', sequence: 1, mandatory: true },
@@ -29,40 +27,19 @@ const AdminModule = () => {
     mandatory: false,
   });
   const [editingMethodIndex, setEditingMethodIndex] = useState(null);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState('');
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [methodSearchTerm, setMethodSearchTerm] = useState('');
 
-  const ADMIN_USERNAME = 'admin';
-  const ADMIN_PASSWORD = 'admin123';
-
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (role === '') {
-      setAuthError('Please select a role (admin or guest).');
-      return;
+  useEffect(() => {
+    const savedCompanies = JSON.parse(localStorage.getItem('companies'));
+    if (savedCompanies) {
+      setCompanies(savedCompanies);
     }
 
-    if (role === 'admin') {
-      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        setAuthError('');
-        setIsAdminLoggedIn(true);
-      } else {
-        setAuthError('Invalid username or password for admin.');
-      }
-    } else if (role === 'guest') {
-      setAuthError('');
+    const savedMethods = JSON.parse(localStorage.getItem('methods'));
+    if (savedMethods) {
+      setMethods(savedMethods);
     }
-  };
-
-  const handleRoleChange = (selectedRole) => {
-    setRole(selectedRole);
-    setUsername('');
-    setPassword('');
-    setAuthError('');
-    setIsAdminLoggedIn(false);
-  };
+  }, []);
 
   const handleCompanyInputChange = (e) => {
     setCompanyForm({ ...companyForm, [e.target.name]: e.target.value });
@@ -79,14 +56,17 @@ const AdminModule = () => {
       return;
     }
 
+    let updatedCompanies;
     if (editingCompanyIndex !== null) {
-      const updatedCompanies = companies.slice();
+      updatedCompanies = companies.slice();
       updatedCompanies[editingCompanyIndex] = companyForm;
-      setCompanies(updatedCompanies);
       setEditingCompanyIndex(null);
     } else {
-      setCompanies([...companies, companyForm]);
+      updatedCompanies = [...companies, companyForm];
     }
+
+    setCompanies(updatedCompanies);
+    localStorage.setItem('companies', JSON.stringify(updatedCompanies));
     resetCompanyForm();
   };
 
@@ -103,15 +83,15 @@ const AdminModule = () => {
   };
 
   const editCompany = (index) => {
-    if (role !== 'admin') return;
     setCompanyForm(companies[index]);
     setEditingCompanyIndex(index);
   };
 
   const deleteCompany = (index) => {
-    if (role !== 'admin') return;
     if (window.confirm('Are you sure you want to delete this company?')) {
-      setCompanies(companies.filter((_, i) => i !== index));
+      const updatedCompanies = companies.filter((_, i) => i !== index);
+      setCompanies(updatedCompanies);
+      localStorage.setItem('companies', JSON.stringify(updatedCompanies));
     }
   };
 
@@ -121,14 +101,17 @@ const AdminModule = () => {
       return;
     }
 
+    let updatedMethods;
     if (editingMethodIndex !== null) {
-      const updatedMethods = methods.slice();
+      updatedMethods = methods.slice();
       updatedMethods[editingMethodIndex] = methodForm;
-      setMethods(updatedMethods);
       setEditingMethodIndex(null);
     } else {
-      setMethods([...methods, methodForm]);
+      updatedMethods = [...methods, methodForm];
     }
+
+    setMethods(updatedMethods);
+    localStorage.setItem('methods', JSON.stringify(updatedMethods));
     resetMethodForm();
   };
 
@@ -142,15 +125,15 @@ const AdminModule = () => {
   };
 
   const editMethod = (index) => {
-    if (role !== 'admin') return;
     setMethodForm(methods[index]);
     setEditingMethodIndex(index);
   };
 
   const deleteMethod = (index) => {
-    if (role !== 'admin') return;
     if (window.confirm('Are you sure you want to delete this method?')) {
-      setMethods(methods.filter((_, i) => i !== index));
+      const updatedMethods = methods.filter((_, i) => i !== index);
+      setMethods(updatedMethods);
+      localStorage.setItem('methods', JSON.stringify(updatedMethods));
     }
   };
 
@@ -158,185 +141,238 @@ const AdminModule = () => {
     company.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredMethods = methods.filter(method =>
+    method.name.toLowerCase().includes(methodSearchTerm.toLowerCase())
+  );
+
   return (
-    <div className="container mx-auto p-4 items-center">
-      <h2 className="text-2xl font-bold flex justify-center items-center mr-4">Admin Module</h2>
-
-      {/* Role Selection */}
-      {role === '' && (
-        <section className="mb-4 flex justify-center items-center">
-          <h4 className="text-lg mr-4">Please select your role:</h4>
-          <button
-            className="bg-red-500 text-white px-4 py-2 rounded mr-2"
-            onClick={() => handleRoleChange('admin')}
-          >
-            Admin
-          </button>
-          <button
-            className="bg-gray-500 text-white px-4 py-2 rounded"
-            onClick={() => handleRoleChange('guest')}
-          >
-            Guest
-          </button>
-        </section>
-      )}
-
-      {/* Admin Login Form */}
-      {role === 'admin' && !isAdminLoggedIn && (
-        <section className="mb-4">
-          <h4 className="text-lg">Login as Admin</h4>
-          <form onSubmit={handleLogin}>
-            <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="border p-2 rounded mb-2 w-full"
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="border p-2 rounded mb-2 w-full"
-              required
-            />
-            <button type="submit" className="bg-red-500 text-white px-4 py-2 rounded">
-              Login
-            </button>
-          </form>
-          {authError && <div className="text-red-500 mt-2">{authError}</div>}
-        </section>
-      )}
+    <div className="container mx-auto px-4 py-6">
+      <h2 className="text-3xl font-semibold text-center mb-6">Admin Module</h2>
 
       {/* Role-based content */}
-      {role !== '' && (
-        <>
-          <section className="mb-4">
-            <h4 className="text-lg">Role: {role === 'admin' ? 'Admin' : 'Guest'}</h4>
-          </section>
+      <div className="text-center text-xl text-gray-600 mb-6">
+        <h4>{!isGuest ? 'Role: Admin' : 'Role: Guest'}</h4>
+      </div>
 
-          {/* Company Management (Only after Admin Login) */}
-          {isAdminLoggedIn || role === 'guest' ? (
-            <section className="mb-4">
-              <h3 className="text-xl font-bold">Company Management</h3>
-              <input
-                type="text"
-                placeholder="Search companies"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border p-2 rounded mb-4 w-full"
-              />
-              {/* Add/Edit company form */}
-              <form className="space-y-4">
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Company Name"
-                  value={companyForm.name}
-                  onChange={handleCompanyInputChange}
-                  className="border p-2 rounded w-full"
-                />
-                <input
-                  type="text"
-                  name="location"
-                  placeholder="Location"
-                  value={companyForm.location}
-                  onChange={handleCompanyInputChange}
-                  className="border p-2 rounded w-full"
-                />
-                <input
-                  type="text"
-                  name="linkedin"
-                  placeholder="LinkedIn Profile"
-                  value={companyForm.linkedin}
-                  onChange={handleCompanyInputChange}
-                  className="border p-2 rounded w-full"
-                />
-                <input
-                  type="text"
-                  name="emails"
-                  placeholder="Emails"
-                  value={companyForm.emails}
-                  onChange={handleCompanyInputChange}
-                  className="border p-2 rounded w-full"
-                />
-                <input
-                  type="text"
-                  name="phoneNumbers"
-                  placeholder="Phone Numbers"
-                  value={companyForm.phoneNumbers}
-                  onChange={handleCompanyInputChange}
-                  className="border p-2 rounded w-full"
-                />
-                <textarea
-                  name="comments"
-                  placeholder="Comments"
-                  value={companyForm.comments}
-                  onChange={handleCompanyInputChange}
-                  className="border p-2 rounded w-full"
-                />
-                <select
-                  name="periodicity"
-                  value={companyForm.periodicity}
-                  onChange={handleCompanyInputChange}
-                  className="border p-2 rounded w-full"
-                >
-                  <option value="1 week">1 week</option>
-                  <option value="2 weeks">2 weeks</option>
-                  <option value="1 month">1 month</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={saveCompany}
-                  className="bg-green-500 text-white px-4 py-2 rounded"
-                >
-                  {editingCompanyIndex !== null ? 'Update Company' : 'Add Company'}
-                </button>
-              </form>
+      {/* Search for Companies */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search companies"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-lg"
+        />
+      </div>
 
-              {/* List of Companies */}
-              <ul className="mt-4">
-                {filteredCompanies.map((company, index) => (
-                  <li key={index} className="border p-2 mb-2">
-                    <div className="font-semibold">
-                      {company.name} ({company.location})
-                    </div>
-                    {(role === 'admin' && isAdminLoggedIn) && (
-                      <div className="mt-2">
-                        <button
-                          onClick={() => editCompany(index)}
-                          className="bg-yellow-500 text-white px-2 py-1 rounded mr-2"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deleteCompany(index)}
-                          className="bg-red-500 text-white px-2 py-1 rounded"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : (
-            <div>You must log in as an Admin to view this section.</div>
-          )}
-
-          {/* Logout Button */}
-          <section className="mb-4">
-            <button
-              className="bg-red-500 text-white px-4 py-2 rounded mt-2"
-              onClick={() => setRole('')}
+      {/* Company Management */}
+      {!isGuest ? (
+        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h3 className="text-2xl font-semibold mb-4">Company Management</h3>
+          <form className="space-y-4">
+            <input
+              type="text"
+              name="name"
+              placeholder="Company Name"
+              value={companyForm.name}
+              onChange={handleCompanyInputChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+            <input
+              type="text"
+              name="location"
+              placeholder="Location"
+              value={companyForm.location}
+              onChange={handleCompanyInputChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+            <input
+              type="text"
+              name="linkedin"
+              placeholder="LinkedIn Profile"
+              value={companyForm.linkedin}
+              onChange={handleCompanyInputChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+            <input
+              type="text"
+              name="emails"
+              placeholder="Emails"
+              value={companyForm.emails}
+              onChange={handleCompanyInputChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+            <input
+              type="text"
+              name="phoneNumbers"
+              placeholder="Phone Numbers"
+              value={companyForm.phoneNumbers}
+              onChange={handleCompanyInputChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+            <textarea
+              name="comments"
+              placeholder="Comments"
+              value={companyForm.comments}
+              onChange={handleCompanyInputChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+            <select
+              name="periodicity"
+              value={companyForm.periodicity}
+              onChange={handleCompanyInputChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
             >
-              Logout
+              <option value="1 week">1 week</option>
+              <option value="2 weeks">2 weeks</option>
+              <option value="1 month">1 month</option>
+            </select>
+            <button
+              type="button"
+              onClick={saveCompany}
+              className="w-full p-3 bg-green-500 text-white rounded-lg hover:bg-green-600"
+            >
+              {editingCompanyIndex !== null ? 'Update Company' : 'Add Company'}
             </button>
-          </section>
-        </>
+          </form>
+
+          {/* List of Companies */}
+          <ul className="mt-6">
+            {filteredCompanies.map((company, index) => (
+              <li key={index} className="bg-white p-4 mb-4 border border-gray-300 rounded-lg">
+                <div className="text-xl font-semibold">{company.name} ({company.location})</div>
+                <div className="mt-2">
+                  <button
+                    onClick={() => editCompany(index)}
+                    className="bg-yellow-500 text-white px-4 py-2 rounded-lg mr-2 hover:bg-yellow-600"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => deleteCompany(index)}
+                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h3 className="text-2xl font-semibold mb-4">You are logged in as a guest</h3>
+          <ul className="mt-6">
+            {filteredCompanies.map((company, index) => (
+              <li key={index} className="bg-white p-4 mb-4 border border-gray-300 rounded-lg">
+                <div className="text-xl font-semibold">{company.name} ({company.location})</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Search for Methods */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search methods"
+          value={methodSearchTerm}
+          onChange={(e) => setMethodSearchTerm(e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-lg"
+        />
+      </div>
+
+      {/* Method Management */}
+      {!isGuest ? (
+        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h3 className="text-2xl font-semibold mb-4">Method Management</h3>
+          <form className="space-y-4">
+            <input
+              type="text"
+              name="name"
+              placeholder="Method Name"
+              value={methodForm.name}
+              onChange={handleMethodInputChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+            <textarea
+              name="description"
+              placeholder="Description"
+              value={methodForm.description}
+              onChange={handleMethodInputChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+            <input
+              type="number"
+              name="sequence"
+              placeholder="Sequence"
+              value={methodForm.sequence}
+              onChange={handleMethodInputChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
+            <label className="block">
+              <input
+                type="checkbox"
+                name="mandatory"
+                checked={methodForm.mandatory}
+                onChange={handleMethodInputChange}
+                className="mr-2"
+              />
+              Mandatory
+            </label>
+            <button
+              type="button"
+              onClick={saveMethod}
+              className="w-full p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            >
+              {editingMethodIndex !== null ? 'Update Method' : 'Add Method'}
+            </button>
+          </form>
+
+          {/* List of Methods */}
+          <ul className="mt-6">
+            {filteredMethods.map((method, index) => (
+              <li key={index} className="bg-white p-4 mb-4 border border-gray-300 rounded-lg">
+                <div className="text-xl font-semibold">{method.name}</div>
+                <div className="mt-2">
+                  <div className="text-gray-500">{method.description}</div>
+                  <div className="text-gray-500">Sequence: {method.sequence}</div>
+                  <div className="text-gray-500">Mandatory: {method.mandatory ? 'Yes' : 'No'}</div>
+                </div>
+                <div className="mt-2">
+                  <button
+                    onClick={() => editMethod(index)}
+                    className="bg-yellow-500 text-white px-4 py-2 rounded-lg mr-2 hover:bg-yellow-600"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => deleteMethod(index)}
+                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h3 className="text-2xl font-semibold mb-4">You are logged in as a guest</h3>
+          <ul className="mt-6">
+            {filteredMethods.map((method, index) => (
+              <li key={index} className="bg-white p-4 mb-4 border border-gray-300 rounded-lg">
+                <div className="text-xl font-semibold">{method.name}</div>
+                <div className="mt-2">
+                  <div className="text-gray-500">{method.description}</div>
+                  <div className="text-gray-500">Sequence: {method.sequence}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
